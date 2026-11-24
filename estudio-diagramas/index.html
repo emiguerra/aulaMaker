@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estudio de diagramas · Aula Maker</title>
+<style>
+  :root { --tinta:#1E1E1E; --tenue:#8a8a85; --linea:#e2e2de; --fondo:#f4f4f1; --rojo:#FF4040; --verde:#3CBF96; --amarillo:#FFDF51; --azul:#2E90CF; --rosado:#FF639B; }
+  * { box-sizing:border-box; margin:0; padding:0 }
+  body { background:var(--fondo); color:var(--tinta); font:13px/1.45 "NeutrifStudio-Regular", system-ui, sans-serif; min-height:100vh }
+  b, strong, h1, h2, h3 { font-family:"NeutrifStudio-SemiBold"; font-weight:normal }
+  header { display:flex; align-items:center; gap:12px; padding:14px 24px; border-bottom:1px solid var(--linea); background:#fff; position:sticky; top:0; z-index:10; flex-wrap:wrap }
+  header .marca { font-family:"NeutrifStudio-SemiBold"; font-size:15px; margin-right:auto; cursor:pointer }
+  header .marca span { color:var(--rojo) }
+  button, select { font:inherit; border:1px solid var(--tinta); background:#fff; color:var(--tinta); padding:7px 14px; border-radius:999px; cursor:pointer }
+  button.principal { background:var(--tinta); color:#fff }
+  button:hover { border-color:var(--rojo) }
+  .oculto { display:none !important }
+
+  /* Dashboard */
+  .resumen { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; padding:22px 24px 6px }
+  .kpi { background:#fff; border:1px solid var(--linea); border-radius:14px; padding:14px 16px }
+  .kpi .n { font-family:"NeutrifStudio-Medium"; font-size:30px; line-height:1.1 }
+  .kpi .t { color:var(--tenue); font-size:12px; margin-top:2px }
+  .kpi.ok .n { color:var(--verde) } .kpi.mal .n { color:var(--rojo) } .kpi.pend .n { color:#b59a00 }
+  .filtros { display:flex; gap:8px; flex-wrap:wrap; padding:14px 24px; align-items:center }
+  .chip { border:1px solid var(--linea); background:#fff; border-radius:999px; padding:5px 12px; font-size:12px; color:#555; cursor:pointer }
+  .chip.on { border-color:var(--tinta); color:var(--tinta); background:#fff; box-shadow:inset 0 0 0 1px var(--tinta) }
+  .capitulo { padding:6px 24px 18px }
+  .capitulo h2 { font-size:14px; margin:12px 0 10px; display:flex; gap:10px; align-items:baseline }
+  .capitulo h2 small { color:var(--tenue); font-family:"NeutrifStudio-Regular"; font-size:12px }
+  .grilla { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px }
+  .card { background:#fff; border:1px solid var(--linea); border-radius:14px; overflow:hidden; cursor:pointer; display:flex; flex-direction:column; transition:transform .12s, box-shadow .12s }
+  .card:hover { transform:translateY(-2px); box-shadow:0 10px 24px rgba(0,0,0,.07) }
+  .card .mini { aspect-ratio:1.55; display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--linea); background:#fff; padding:6px }
+  .card .mini svg { width:100%; height:100%; }
+  .card .mini.pendiente { background:repeating-linear-gradient(45deg,#fafaf7,#fafaf7 8px,#f2f2ee 8px,#f2f2ee 16px); color:var(--tenue); font-size:12px; padding:20px; text-align:center }
+  .card .meta { padding:11px 14px 13px; display:grid; gap:6px }
+  .card .meta b { font-size:13.5px }
+  .card .sub { color:var(--tenue); font-size:11.5px }
+  .badges { display:flex; gap:6px; flex-wrap:wrap }
+  .badge { font-size:10.5px; border-radius:999px; padding:2px 9px; border:1px solid var(--linea); color:#666; white-space:nowrap }
+  .badge.ok { border-color:var(--verde); color:#1f8a65 }
+  .badge.mal { border-color:var(--rojo); color:var(--rojo) }
+  .badge.pend { border-color:#d8c13d; color:#8a7400 }
+  .badge.rev { border-color:var(--azul); color:var(--azul) }
+  .badge.alta { background:#1E1E1E; color:#fff; border-color:#1E1E1E }
+
+  /* Editor */
+  #editor { display:grid; grid-template-columns:360px 1fr 300px; min-height:calc(100vh - 62px) }
+  aside { border-right:1px solid var(--linea); background:#fff; display:flex; flex-direction:column; padding:16px; gap:10px }
+  aside h3 { font-size:15px }
+  aside .sub { color:var(--tenue); font-size:12px; margin-top:-6px }
+  textarea { min-height:300px; flex:1; resize:vertical; border:1px solid var(--linea); border-radius:10px; padding:12px; font:12px/1.55 "RobotoMono-Regular", ui-monospace, monospace; color:var(--tinta); tab-size:2; white-space:pre; overflow:auto }
+  textarea:focus { outline:none; border-color:var(--tinta) }
+  .estado { border-radius:10px; padding:10px 12px; font-size:12.5px }
+  .estado.ok { background:#eaf8f2; color:#1f7a5a }
+  .estado.mal { background:#fff0f0; color:#b52a2a }
+  .estado ul { margin:6px 0 0 16px; max-height:140px; overflow:auto }
+  details { border-top:1px dashed var(--linea); padding-top:8px }
+  summary { cursor:pointer; color:var(--tenue) }
+  pre { font:11px/1.55 "RobotoMono-Regular", monospace; color:#555; white-space:pre-wrap; margin-top:6px }
+  .lienzo { overflow:auto; padding:28px; display:flex; flex-direction:column; align-items:center; gap:10px }
+  #vista { width:100%; max-width:1500px; background:#fff; box-shadow:0 1px 0 var(--linea), 0 10px 30px rgba(0,0,0,.06) }
+  #vista svg { display:block; width:100%; height:auto }
+  .nota { color:var(--tenue); font-size:12px }
+  #aviso { color:var(--verde) }
+  /* Panel de estilo */
+  #panelEstilo { border-right:none; border-left:1px solid var(--linea); gap:14px; overflow:auto; max-height:calc(100vh - 62px); position:sticky; top:62px }
+  #panelEstilo h3 { display:flex; justify-content:space-between; align-items:baseline }
+  .seg { display:flex; border:1px solid var(--linea); border-radius:999px; padding:2px; gap:2px }
+  #panelEstilo, #panelEstilo > * { min-width:0 }
+  #panelEstilo { overflow-x:hidden }
+  .seg span { flex:1 1 0; min-width:0; text-align:center; padding:4px 3px; border-radius:999px; cursor:pointer; font-size:11px; color:#555; display:flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap }
+  .seg.punt span { flex-direction:column; gap:1px; padding:5px 2px; border-radius:10px; font-size:10.5px }
+  .seg.punt { border-radius:12px }
+  .seg span.on { background:var(--tinta); color:#fff }
+  .seg span.on svg line { stroke:#fff }
+  .grupoE { display:grid; gap:7px }
+  .grupoE h4 { font-family:"NeutrifStudio-SemiBold"; font-weight:normal; font-size:12px }
+  .grupoE .nota { margin-top:-3px }
+  .muestras { display:flex; gap:6px; flex-wrap:wrap }
+  .muestra { width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid #fff; box-shadow:0 0 0 1px var(--linea); display:flex; align-items:center; justify-content:center; font-size:10px; color:#777 }
+  .muestra.on { box-shadow:0 0 0 2px var(--tinta) }
+  .muestra.auto { background:conic-gradient(#FF639B 0 20%, #2E90CF 0 40%, #FF4040 0 60%, #3CBF96 0 80%, #FFDF51 0) }
+  .fila { display:grid; grid-template-columns:26px minmax(0,1fr) auto; gap:8px; align-items:center; font-size:12px }
+  .fila input[type=color] { width:26px; height:26px; border:none; padding:0; background:none; cursor:pointer }
+  .fila code { font:11px "RobotoMono-Regular", monospace; color:var(--tenue) }
+  .rango { display:grid; grid-template-columns:minmax(0,1fr) 40px; gap:8px; align-items:center; font-size:12px }
+  .rango label { display:grid; gap:3px }
+  .rango input { width:100%; accent-color:var(--tinta) }
+  .rango output { text-align:right; font:11px "RobotoMono-Regular", monospace }
+  .cambios { border-radius:10px; padding:9px 11px; font-size:12px; background:#f6f6f3 }
+  .cambios.milla { background:#eaf8f2; color:#1f7a5a }
+  .cambios ul { margin:4px 0 0 16px }
+  .badge.est { border-color:#b9b9b4; color:#555; border-style:dashed }
+  @media (max-width:1180px){ #editor{ grid-template-columns:340px 1fr } #panelEstilo{ grid-column:1 / -1; position:static; max-height:none; border-left:none; border-top:1px solid var(--linea) } }
+  @media (max-width:860px){ #editor{ grid-template-columns:1fr } aside{ border-right:none; border-bottom:1px solid var(--linea) } }
+</style>
+</head>
+<body>
+<header>
+  <div class="marca" id="inicio">Estudio de diagramas <span>·</span> Aula Maker</div>
+  <span id="aviso"></span>
+  <span id="botonesDash">
+    <button id="todos">Descargar todos los SVG</button>
+  </span>
+  <span id="botonesEditor" class="oculto">
+    <button id="volver">← Dashboard</button>
+    <button id="copiar">Copiar SVG</button>
+    <button id="png">Descargar PNG</button>
+    <button id="svg" class="principal">Descargar SVG</button>
+  </span>
+</header>
+
+<main id="dash">
+  <section class="resumen" id="resumen"></section>
+  <nav class="filtros" id="filtros"></nav>
+  <div id="capitulos"></div>
+</main>
+
+<main id="editor" class="oculto">
+  <aside>
+    <h3 id="edTitulo"></h3>
+    <div class="sub" id="edSub"></div>
+    <select id="plantilla"></select>
+    <textarea id="texto" spellcheck="false" wrap="off"></textarea>
+    <div id="estado" class="estado"></div>
+    <button id="restaurar">Volver al texto original</button>
+    <details><summary>Cómo se escribe</summary><pre id="ayuda"></pre></details>
+  </aside>
+  <section class="lienzo">
+    <div id="vista"></div>
+    <p class="nota">Tamaño real: carta apaisada (792 × 612 pt por página). Lo marcado en rojo son superposiciones; la línea gris es el centro del pliego. Nada de eso se exporta.</p>
+  </section>
+  <aside id="panelEstilo"></aside>
+</main>
+
+<script src="fuentes.js"></script>
+<script src="ejemplos.js"></script>
+<script src="app.js"></script>
+<script src="plantillas2.js"></script>
+<script src="revisor.js"></script>
+<script src="estilo.js"></script>
+<script src="diagramas.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
