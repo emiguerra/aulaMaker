@@ -267,10 +267,7 @@ function iniciarPanel() {
 function aviso(t) { $('#aviso').textContent = t; clearTimeout(aviso.t); aviso.t = setTimeout(() => { $('#aviso').textContent = ''; }, 4000); }
 
 async function iniciar() {
-  for (const [k, b] of Object.entries(fuentesTodas())) {
-    const bytes = Uint8Array.from(atob(b), c => c.charCodeAt(0));
-    const f = new FontFace(k, bytes.buffer); await f.load(); document.fonts.add(f);
-  }
+  await cargarFuentes();
   const sel = $('#plantilla');
   for (const [id, p] of Object.entries(PLANTILLAS)) sel.add(new Option(p.nombre, id));
   sel.onchange = () => { guardar('pl:' + actual.id, sel.value); $('#ayuda').textContent = PLANTILLAS[sel.value].ayuda; dibujar(); };
