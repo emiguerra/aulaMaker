@@ -596,7 +596,7 @@ function rejilla(d) {
   const acc = colorDe(d.props.color, PAL.rosado);
   const nc = +(d.props.columnas || 2);
   const bs = d.items.filter(i => i.k === 'cuadrante' || i.k === 'bloque');
-  const mx = doble ? 80 : 60;
+  const mx = doble ? 80 : (nc > 3 ? 40 : 60);
   const cw = (W - 2 * mx) / nc;
   // bordes de columna; en pliego, la costura siempre es un borde
   const k1 = Math.ceil(nc / 2);
@@ -611,12 +611,13 @@ function rejilla(d) {
     filas[filas.length - 1].push({ b, col: usado, span }); usado += span;
   });
   const cuerpo = (b, w) => {
-    let alto = 30, parts = [];
+    const tl = cortar(b.args[0], T.seccion, w);           // el título se corta si no cabe en la columna
+    let alto = 30 + (tl.length - 1) * T.seccion.lh, parts = [];
     b.hijos.forEach(h => {
       if (h.k === '-' || h.k === '*') { const mm = textoMixto(h.args.join(' | '), 0, 0, w - 12, est, estB); alto += mm.alto + 7; parts.push(['-', h]); }
       else if (h.k === 'texto') { const ls = cortar(h.args.join(' | '), est, w); alto += ls.length * est.lh + 7; parts.push(['t', ls]); }
     });
-    return { alto, parts };
+    return { alto, parts, tl };
   };
   filas.forEach(f => f.forEach(c => { c.w = bordes[c.col + c.span] - bordes[c.col] - 40; c.m = cuerpo(c.b, c.w); }));
   const altosF = filas.map(f => Math.max(...f.map(c => c.m.alto)) + 34);
@@ -629,8 +630,8 @@ function rejilla(d) {
     f.forEach((c, ci) => {
       const x = bordes[c.col] + 20;
       if (c.col > 0) lineas += linea(bordes[c.col], y + (fi > 0 ? 6 : 0), bordes[c.col], y + hF - (fi < filas.length - 1 ? 6 : 0), true);
-      let s = texto([c.b.args[0]], x, y + 26, T.seccion, 'start', acc);
-      let yy = y + 26 + 26;
+      let s = texto(c.m.tl, x, y + 26, T.seccion, 'start', acc);
+      let yy = y + 26 + (c.m.tl.length - 1) * T.seccion.lh + 26;
       c.m.parts.forEach(([k, v]) => {
         if (k === '-') {
           s += punto(x + 2, yy - 3.4, 1.3);
@@ -648,7 +649,7 @@ function rejilla(d) {
 
 /* ───────────── Registro ───────────── */
 Object.assign(PLANTILLAS, {
-  linea:     { nombre: 'Línea de tiempo', fn: lineaTiempo, archivo: 'linea-tiempo', ayuda: `color rojo · formato doble | simple\nhito Año | texto | cita` },
+  linea:     { nombre: 'Línea de tiempo', fn: lineaTiempo, archivo: 'linea-tiempo', ayuda: `color rojo\nhito Año | texto | cita` },
   arbol:     { nombre: 'Árbol (uno a varios)', fn: arbol, archivo: 'arbol', ayuda: `color rojo · prefijo Específico\nraiz Etiqueta | texto\nhijo Título | texto | vínculo con asterisco` },
   tablaT:    { nombre: 'Tabla en T', fn: tablaT, archivo: 'tabla-t', ayuda: `titulo Texto sobre la T (opcional)\ncolumna Título\n  - Negrita: texto\n  * punto con asterisco` },
   matriz:    { nombre: 'Matriz de puntos', fn: matriz, archivo: 'matriz', ayuda: `encabezado A | B | C\nfila Nombre | si | no | ~ | ?\n  si = punto · no = círculo · ~ = en parte · ? = sin dato\nfila Nombre * (resalta la fila)` },
@@ -664,4 +665,4 @@ Object.assign(PLANTILLAS, {
 });
 PLANTILLAS.cuadrantes.fn = rejilla;
 PLANTILLAS.cuadrantes.nombre = 'Bloques (FODA, Canvas)';
-PLANTILLAS.cuadrantes.ayuda = `color rosado · formato simple | doble\ncolumnas 2\nbloque Título | columnas que ocupa\n  - Negrita: texto\n  texto párrafo libre`;
+PLANTILLAS.cuadrantes.ayuda = `color rosado\ncolumnas 2\nbloque Título | columnas que ocupa\n  - Negrita: texto\n  texto párrafo libre`;

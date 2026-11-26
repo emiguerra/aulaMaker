@@ -9,7 +9,9 @@ línea fina negra, punteadas, puntos, asterisco ✱ y un color de acento.
   (sin superposiciones, revisar contenido, pendiente por falta de datos).
 - **Editor:** clic en un diagrama → se edita el texto a la izquierda y el diagrama se
   redibuja. El **revisor** marca en rojo cualquier texto que choque con otro, línea que
-  pase sobre un texto, líneas que se crucen sin querer y textos sobre la costura del pliego.
+  pase sobre un texto, líneas que se crucen sin querer y textos fuera de la página.
+- **Una página:** la memoria es digital, así que todo diagrama se arma en una página carta
+  apaisada (792 × 612 pt). La línea `formato` ya no se usa.
 - **Estilo gráfico (panel derecho del editor):** color principal, acentos en color o
   solo tinta, ajuste de la paleta, tinta y gris, grosor de línea, tipo de punteado,
   radio del punto, grosor del asterisco, tamaño de texto e interlineado y peso de los

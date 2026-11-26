@@ -98,6 +98,7 @@ function leer(src) {
     else if (['color', 'formato', 'nombre', 'prefijo', 'eje', 'estilo', 'unidad', 'columnas', 'titulo', 'escala'].includes(k)) props[k] = args[0];
     else items.push({ k, args, hijos: [] });
   }
+  props.formato = 'simple';   // la memoria es digital: todo diagrama cabe en una página
   return { props, items };
 }
 const colorDe = (nombre, porDefecto) => PAL[(nombre || '').toLowerCase()] || porDefecto;
@@ -109,26 +110,102 @@ function repartir(k, a, b) { return Array.from({ length: k }, (_, i) => a + (i +
 /* ───────────── Plantilla: eje de conceptos ─────────────
    Círculos sobre un eje horizontal, con ramas, citas y arcos punteados (como el cierre de Territorio). */
 function ejeConceptos(d) {
-  const doble = d.props.formato !== 'simple';
-  const W = doble ? PAG.w * 2 : PAG.w, H = PAG.h;
+  const W = PAG.w, H = PAG.h, M = 14;              // M: margen mínimo de cualquier texto al borde
   const acc = colorDe(d.props.color, PAL.rojo);
-  const Y = +d.props.eje || 262;
   const nodos = d.items.filter(i => i.k === 'nodo');
   const n = nodos.length;
-  const xs = doble
-    ? [...repartir(Math.ceil(n / 2), 70, PAG.w - 40), ...repartir(n - Math.ceil(n / 2), PAG.w + 40, W - 70)]
-    : repartir(n, 60, W - 60);
+  const arcos = d.items.filter(i => i.k === 'arco').map(a => {
+    const p = a.args[0].split(/\s+/);
+    return { a, lado: p[0].toLowerCase(), i: +p[1] - 1, j: +p[2] - 1 };
+  }).filter(o => nodos[o.i] && nodos[o.j]);
 
+  // Medición: círculos, textos y ancho que ocupa cada nodo (con radios y anchos de texto según "apretado")
+  const medir = apretado => {
+    const maxW = apretado ? 100 : 128;
+    const geo = nodos.map(nd => {
+      const tam = (nd.args[1] || '').toLowerCase();
+      let r = apretado ? (tam === 'grande' ? 60 : tam === 'chico' ? 36 : 44) : (tam === 'grande' ? 74 : tam === 'chico' ? 44 : 54);
+      const lineas = cortar(nd.args[0], T.titulo, r * 1.5);
+      const dentro = nd.hijos.filter(h => h.k === 'dentro').flatMap(h => cortar(h.args[0], T.meta, r * 1.5));
+      const alto = lineas.length * T.titulo.lh + (dentro.length ? 4 + dentro.length * T.meta.lh : 0);
+      r = Math.max(r, alto / 2 + 16);
+      const ramas = nd.hijos.filter(h => h.k === 'rama').slice(0, 3);
+      const subs = nd.hijos.filter(h => h.k === 'sub');
+      const citas = nd.hijos.filter(h => h.k === 'cita').map(h => h.args[0]);
+      const mitad = (txt, cita) => Math.max(0, ...cortar(txt, T.etiqueta, maxW).map(l => ancho(l, T.etiqueta.fam, T.etiqueta.size) / 2),
+        ...(cita ? cortar(cita, T.cita, maxW + 20) : []).map(l => ancho(l, T.cita.fam, T.cita.size) / 2));
+      let ramasG = [];
+      if (ramas.length) {
+        const m = ramas.length, sep = m === 1 ? [0] : m === 2 ? [-1.25, 1.25] : [-1.6, 0, 1.6];
+        const media = apretado ? 60 : maxW / 2 + 10;
+        ramasG = ramas.map((rm, j) => ({ rm, dx: Math.sign(sep[j]) * Math.max(Math.abs(sep[j]) * r * (m === 3 ? 0.95 : 1), (m === 3 ? 2 : 1) * media), half: mitad(rm.args[0], rm.args[1]) }));
+      }
+      const halfSub = subs.length ? mitad(subs.map(h => h.args[0]).join(' // '), citas.join(' / ')) : citas.length ? mitad('', citas.join(' / ')) : 0;
+      return { nd, r, lineas, dentro, alto, ramasG, subs, citas, maxW, halfSub };
+    });
+    return geo;
+  };
+  // Posiciones: repartidas parejo, o según el radio de cada círculo cuando está apretado
+  const ubicar = (geo, apretado) => {
+    if (!apretado) { const xs = repartir(n, 60, W - 60); geo.forEach((g, i) => g.x = xs[i]); }
+    else {
+      const total = geo.reduce((s, g) => s + 2 * g.r, 0), hueco = (W - 2 * 40 - total) / Math.max(1, n - 1);
+      let x = 40; geo.forEach(g => { g.x = x + g.r; x += 2 * g.r + hueco; });
+    }
+    geo.forEach(g => {
+      g.ramasG.forEach(o => { o.px = Math.min(W - M - o.half, Math.max(M + o.half, g.x + o.dx)); });
+      // ¿la columna central sobre/bajo el círculo queda libre? (ramas a los lados y sin cita al centro)
+      g.centroLibre = g.ramasG.length > 0 && g.ramasG.every(o => Math.abs(o.px - g.x) - o.half > 8) && !g.citas.length;
+      let izq = g.x - g.r, der = g.x + g.r;
+      g.ramasG.forEach(o => { izq = Math.min(izq, o.px - o.half); der = Math.max(der, o.px + o.half); });
+      if (g.halfSub) { izq = Math.min(izq, g.x - g.halfSub); der = Math.max(der, g.x + g.halfSub); }
+      g.ext = [izq, der];
+    });
+  };
+  // ¿Se tocan los textos de nodos vecinos si todo va bajo el eje?
+  const choca = geo => geo.some((g, i) => i < n - 1 && g.ext[1] + 10 > geo[i + 1].ext[0]);
+
+  let apretado = false, geo = medir(false);
+  ubicar(geo, false);
+  if (choca(geo)) { apretado = true; geo = medir(true); ubicar(geo, true); }
+
+  // Lado de cada nodo: 1 = textos bajo el eje, -1 = sobre el eje. Si está apretado se busca
+  // la combinación sin choques entre vecinos del mismo lado ni arcos que crucen textos.
+  let lados = geo.map(() => 1);
+  if (apretado && n <= 12) {
+    const dentro = (x, g) => x > g.ext[0] - 6 && x < g.ext[1] + 6;
+    const costo = s => {
+      let c = 0;
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++)
+        if (s[i] === s[j] && geo[i].ext[1] + 10 > geo[j].ext[0] && geo[j].ext[1] + 10 > geo[i].ext[0]) c += 10;
+      for (const o of arcos) {
+        const [A, B] = o.i < o.j ? [o.i, o.j] : [o.j, o.i];
+        if (o.lado === 'arriba') {
+          for (const e of [A, B]) {
+            const x = s[e] === 1 ? geo[e].x + (e === A ? 0.35 : -0.35) * geo[e].r : geo[e].x;
+            if (s[e] === -1 && !geo[e].centroLibre) c += 1;
+            geo.forEach((g, k) => { if (k !== e && s[k] === -1 && dentro(x, g)) c += 10; });
+          }
+        } else {
+          const xa = s[A] === 1 ? Math.min(geo[A].x - 0.6 * geo[A].r, geo[A].ext[0] - 12) : geo[A].x - 0.6 * geo[A].r;
+          const xb = s[B] === 1 ? Math.max(geo[B].x + 0.6 * geo[B].r, geo[B].ext[1] + 12) : geo[B].x + 0.6 * geo[B].r;
+          if (xa < M || xb > W - M) c += 10;
+          geo.forEach((g, k) => { if (s[k] === 1 && ((k !== A && dentro(xa, g)) || (k !== B && dentro(xb, g)))) c += 10; });
+        }
+      }
+      for (let i = 0; i < n - 1; i++) if (s[i] === s[i + 1]) c += 0.1;
+      return c;
+    };
+    let mejor = Infinity;
+    for (let mask = 0; mask < 1 << n; mask++) {
+      const s = geo.map((_, i) => (mask >> i) & 1 ? -1 : 1);
+      const c = costo(s);
+      if (c < mejor) { mejor = c; lados = s; }
+    }
+  }
+
+  const Y = apretado ? H / 2 : (+d.props.eje || 262);
   let svg = '', fondo = Y;
-  const geo = nodos.map((nd, i) => {
-    const tam = (nd.args[1] || '').toLowerCase();
-    let r = tam === 'grande' ? 74 : tam === 'chico' ? 44 : 54;
-    const lineas = cortar(nd.args[0], T.titulo, r * 1.5);
-    const dentro = nd.hijos.filter(h => h.k === 'dentro').flatMap(h => cortar(h.args[0], T.meta, r * 1.5));
-    const alto = lineas.length * T.titulo.lh + (dentro.length ? 4 + dentro.length * T.meta.lh : 0);
-    r = Math.max(r, alto / 2 + 16);
-    return { nd, x: xs[i], r, lineas, dentro, alto };
-  });
 
   // Eje: tramos entre círculos
   let eje = '';
@@ -136,73 +213,79 @@ function ejeConceptos(d) {
   svg += grupo('eje', eje);
 
   geo.forEach((g, i) => {
-    const { nd, x, r } = g;
+    const { nd, x, r, maxW } = g, lado = lados[i];
     let s = circulo(x, Y, r);
     let y0 = Y - g.alto / 2 + T.titulo.size * 0.78;
     s += texto(g.lineas, x, y0, T.titulo, 'middle');
     if (g.dentro.length) s += texto(g.dentro, x, y0 + g.lineas.length * T.titulo.lh + 4, T.meta, 'middle');
 
-    const ramas = nd.hijos.filter(h => h.k === 'rama');
-    const subs = nd.hijos.filter(h => h.k === 'sub');
-    const citas = nd.hijos.filter(h => h.k === 'cita').map(h => h.args[0]);
-    const maxW = 128;
-    let bajo = Y + r;
-
-    g.izq = x; g.der = x;                            // ancho ocupado bajo el círculo (para desviar arcos)
-    const bloque = (cx, ty, txt, cita) => {          // etiqueta + cita centradas bajo un punto
+    let bajo = Y + r, techo = Y - r;
+    // etiqueta + cita centradas junto a un punto. Bajo el eje, ty es la primera línea base;
+    // sobre el eje, ty es la última, y el bloque crece hacia arriba.
+    const bloque = (cx, ty, txt, cita) => {
       const ls = cortar(txt, T.etiqueta, maxW);
-      const cs0 = cita ? cortar(cita, T.cita, maxW + 20) : [];
-      const half = Math.max(0, ...ls.map(l => ancho(l, T.etiqueta.fam, T.etiqueta.size) / 2), ...cs0.map(l => ancho(l, T.cita.fam, T.cita.size) / 2));
-      g.izq = Math.min(g.izq, cx - half); g.der = Math.max(g.der, cx + half);
-      let out = texto(ls, cx, ty, T.etiqueta, 'middle');
-      let fin = ty + (ls.length - 1) * T.etiqueta.lh;
-      if (cita) { const cs = cortar(cita, T.cita, maxW + 20); out += texto(cs, cx, fin + T.cita.lh + 8, T.cita, 'middle', acc); fin += 8 + cs.length * T.cita.lh; }
-      bajo = Math.max(bajo, fin);
+      const cs = cita ? cortar(cita, T.cita, maxW + 20) : [];
+      const alto = (ls.length - 1) * T.etiqueta.lh + (cs.length ? 8 + cs.length * T.cita.lh : 0);
+      const y1 = lado === 1 ? ty : ty - alto;
+      let out = texto(ls, cx, y1, T.etiqueta, 'middle');
+      if (cs.length) out += texto(cs, cx, y1 + (ls.length - 1) * T.etiqueta.lh + T.cita.lh + 8, T.cita, 'middle', acc);
+      bajo = Math.max(bajo, y1 + alto); techo = Math.min(techo, y1 - T.etiqueta.size);
       return out;
     };
 
-    if (ramas.length) {
-      const m = ramas.length;
-      const sep = m === 1 ? [0] : m === 2 ? [-1.25, 1.25] : [-1.6, 0, 1.6];
-      ramas.slice(0, 3).forEach((rm, j) => {
-        const dx = Math.sign(sep[j]) * Math.max(Math.abs(sep[j]) * r * (m === 3 ? 0.95 : 1), (m === 3 ? 2 : 1) * (maxW / 2 + 10)), dy = r + 30;
+    if (g.ramasG.length) {
+      g.ramasG.forEach(o => {
+        const dx = o.px - x, dy = r + 30;
         const len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
-        s += linea(x + ux * r, Y + uy * r, x + dx, Y + dy);
-        s += punto(x + dx, Y + dy);
-        s += bloque(x + dx, Y + dy + 17, rm.args[0], rm.args[1]);
+        s += linea(x + ux * r, Y + lado * uy * r, o.px, Y + lado * dy);
+        s += punto(o.px, Y + lado * dy);
+        s += bloque(o.px, Y + lado * dy + (lado === 1 ? 17 : -11), o.rm.args[0], o.rm.args[1]);
       });
-      if (citas.length) {
-        const c = citas.join(' / '), w = ancho(c, T.cita.fam, T.cita.size) / 2;
-        g.izq = Math.min(g.izq, x - w); g.der = Math.max(g.der, x + w);
-        s += texto([c], x, bajo + T.cita.lh + 8, T.cita, 'middle', acc); bajo += T.cita.lh + 8;
+      if (g.citas.length) {
+        const c = g.citas.join(' / ');
+        if (lado === 1) { s += texto([c], x, bajo + T.cita.lh + 8, T.cita, 'middle', acc); bajo += T.cita.lh + 8; }
+        else { s += texto([c], x, techo - 8, T.cita, 'middle', acc); techo -= T.cita.lh + 8; }
       }
-    } else if (subs.length) {
-      const py = Y + r + 40;
-      s += linea(x, Y + r + 3, x, py, true) + punto(x, py);
-      s += bloque(x, py + 17, subs.map(h => h.args[0]).join(' // '), citas.join(' / '));
-    } else if (citas.length) {
-      s += bloque(x, Y + r + 18, '', citas.join(' / '));
+    } else if (g.subs.length) {
+      const py = Y + lado * (r + 40);
+      s += linea(x, Y + lado * (r + 3), x, py, true) + punto(x, py);
+      s += bloque(x, py + (lado === 1 ? 17 : -11), g.subs.map(h => h.args[0]).join(' // '), g.citas.join(' / '));
+    } else if (g.citas.length) {
+      s += bloque(x, Y + lado * (r + 18), '', g.citas.join(' / '));
     }
     fondo = Math.max(fondo, bajo);
-    g.bajo = bajo;
+    g.bajo = bajo; g.techo = techo;
+    // ancho ocupado bajo el círculo (para desviar los arcos de abajo)
+    g.izq = lado === 1 ? g.ext[0] : x; g.der = lado === 1 ? g.ext[1] : x;
     svg += grupo(`nodo-${i + 1}`, s);
   });
 
   // Arcos: "arco arriba 1 4 | cita"  ·  "arco abajo 1 6 | etiqueta | cita"
-  d.items.filter(i => i.k === 'arco').forEach((a, j) => {
-    const p = a.args[0].split(/\s+/);
-    const lado = p[0].toLowerCase(), A = geo[+p[1] - 1], B = geo[+p[2] - 1];
-    if (!A || !B) return;
+  arcos.forEach((o, j) => {
+    const { a, lado } = o;
+    const [A, B] = o.i < o.j ? [geo[o.i], geo[o.j]] : [geo[o.j], geo[o.i]];
+    const [ia, ib] = o.i < o.j ? [o.i, o.j] : [o.j, o.i];
     let s = '';
-    if (lado === 'arriba') {
+    if (lado === 'arriba' && !apretado) {
       // Nace y muere sobre el borde superior de cada círculo
       const xa = A.x + A.r * 0.35, xb = B.x - B.r * 0.35;
       const ya = Y - Math.sqrt(A.r ** 2 - (A.r * 0.35) ** 2) - 3, yb = Y - Math.sqrt(B.r ** 2 - (B.r * 0.35) ** 2) - 3;
       const tope = Math.max(48, Math.min(ya, yb) - Math.min(210, (xb - xa) * 0.32));
-      // Arranca dentro del círculo, como en el original
       s += camino(`M${r2(xa)},${r2(ya)} C${r2(xa)},${r2(tope)} ${r2(xb)},${r2(tope)} ${r2(xb)},${r2(yb)}`, true);
       const ap = 0.125 * ya + 0.75 * tope + 0.125 * yb;
       s += texto(cortar(a.args[1] || '', T.cita, 300), (xa + xb) / 2, ap - 12, T.cita, 'middle', acc);
+    } else if (lado === 'arriba') {
+      // Apretado: sube por fuera de los textos, corre sobre todo y baja a cada nodo
+      const extremo = (g, k, signo) => lados[k] === 1
+        ? [g.x + signo * g.r * 0.35, Y - Math.sqrt(g.r ** 2 - (g.r * 0.35) ** 2) - 3]
+        : [g.x, g.centroLibre ? Y - g.r - 3 : g.techo - 4];
+      const [xa, ya] = extremo(A, ia, 1), [xb, yb] = extremo(B, ib, -1);
+      const techo = Math.min(...geo.slice(ia, ib + 1).map(g => g.techo));
+      const base = Math.max(T.cita.lh + 26, techo - 30), R = 24;
+      s += camino(`M${r2(xa)},${r2(ya)} L${r2(xa)},${r2(base + R)} Q${r2(xa)},${r2(base)} ${r2(xa + R)},${r2(base)} L${r2(xb - R)},${r2(base)} Q${r2(xb)},${r2(base)} ${r2(xb)},${r2(base + R)} L${r2(xb)},${r2(yb)}`, true);
+      if (lados[ia] === -1 && !A.centroLibre) s += punto(xa, ya);
+      if (lados[ib] === -1 && !B.centroLibre) s += punto(xb, yb);
+      s += texto(cortar(a.args[1] || '', T.cita, 300), (xa + xb) / 2, base - 8, T.cita, 'middle', acc);
     } else {
       const base = Math.min(H - 52, fondo + 46), R = 34;
       // Baja por fuera de los textos de cada nodo: sale del borde inferior del círculo y se abre en diagonal.
@@ -218,10 +301,7 @@ function ejeConceptos(d) {
       dd += `L${r2(xa)},${r2(base - R)} Q${r2(xa)},${r2(base)} ${r2(xa + R)},${r2(base)} L${r2(xb - R)},${r2(base)} Q${r2(xb)},${r2(base)} ${r2(xb)},${r2(base - R)} `;
       dd += qb ? `L${r2(xb)},${r2(qb)} L${r2(sbx)},${r2(sby)}` : `L${r2(sbx)},${r2(sby)}`;
       s += camino(dd, true);
-      const wl = Math.max(a.args[1] ? ancho(a.args[1], T.titulo.fam, T.titulo.size) : 0, a.args[2] ? ancho(a.args[2], T.cita.fam, T.cita.size) : 0);
-      let lx = (xa + xb) / 2 - wl / 2;
-      if (W > PAG.w && lx < PAG.w + 12 && lx + wl > PAG.w - 12) lx = (PAG.w + 12 + wl < xb - R) ? PAG.w + 12 : PAG.w - 12 - wl;
-      const cx = lx + wl / 2;
+      const cx = (xa + xb) / 2;
       if (a.args[1]) s += texto([a.args[1]], cx, base - 6, T.titulo, 'middle');
       if (a.args[2]) s += texto([a.args[2]], cx, base + T.cita.lh + 4, T.cita, 'middle', acc);
     }
@@ -366,14 +446,16 @@ function etapas(d) {
   const n = es.length;
   const sc = doble ? 1 : 0.7;
   const u = [104 * sc, -29 * sc], v = [78 * sc, 48 * sc];     // lados del rombo
-  const x0 = doble ? 150 : 90, x1 = W - (doble ? 150 : 90);
+  const x0 = doble ? 150 : 104, x1 = W - (doble ? 150 : 126);
   const paso = n > 1 ? (x1 - x0) / (n - 1) : 0;
   // En pliego: la mitad de las etapas en cada página, sin rombos ni textos sobre la costura
   const k1 = Math.ceil(n / 2);
   const cxDe = i => !doble || n < 2 ? x0 + i * paso
     : i < k1 ? x0 + i * ((PAG.w - 130 - x0) / Math.max(1, k1 - 1)) : (PAG.w + 150) + (i - k1) * ((x1 - PAG.w - 150) / Math.max(1, n - k1 - 1));
-  const sube = n > 1 ? Math.min(34, 210 / (n - 1)) : 0;
-  const baseY = doble ? 420 : 400;
+  // En una página la escalera sube más, para que cada descripción quede bajo la siguiente etapa
+  const sube = n > 1 ? (doble ? Math.min(34, 210 / (n - 1)) : Math.min(56, Math.max(34, 330 / (n - 1)))) : 0;
+  const baseY = doble ? 420 : 140 + (n - 1) * sube;
+  const descW = doble ? 118 : Math.min(118, paso - 4);
   let svg = '';
   es.forEach((e, i) => {
     const cx = cxDe(i), cy = baseY - i * sube;
@@ -396,7 +478,7 @@ function etapas(d) {
     if (desc) {
       const ax = L[0] + 58 * sc, ay = B[1] + 22;
       s += asterisco(ax, ay, mas ? acc : '#3A3A3A', 5.8);
-      s += texto(cortar(desc, T.meta, 118), ax + 16, ay - 1, T.meta);
+      s += texto(cortar(desc, T.meta, descW), ax + 16, ay - 1, T.meta);
     }
     svg += grupo(`etapa-${i + 1}`, s);
   });
@@ -607,11 +689,11 @@ function trayectorias(d) {
     const pasos = arr.hijos.filter(h => h.k === 'paso').map(h => h.args[0]);
     const n = pasos.length;
     const xs = repartir(n, x0 + 60, x1 - 40).map(x => lejosDelPliegue(x, W, 40));
-    const alto = [158, 218], jit = [0, 8, -14, 10, 4, 16, -6, 12];
+    const alto = [158, 218];                       // zigzag simétrico: todas las cimas y todos los valles a la misma altura
     const pts = [[x0, by0 - 50]];
     let s = '';
     pasos.forEach((p, i) => {
-      const y = (i % 2 ? alto[1] : alto[0]) + jit[i % jit.length] * 0.6 + (i % 2 ? 0 : 0);
+      const y = alto[i % 2];
       pts.push([xs[i], y]);
     });
     pts.push([x1, yA]);
@@ -676,7 +758,7 @@ function barras(d) {
 const PLANTILLAS = {
   eje: {
     nombre: 'Eje de conceptos', fn: ejeConceptos, archivo: 'eje-conceptos',
-    ayuda: `color rojo · formato doble | simple
+    ayuda: `color rojo
 nodo Título | chico · grande
   dentro texto dentro del círculo
   sub etiqueta bajo línea punteada
@@ -688,7 +770,7 @@ arco abajo 2 6 | Etiqueta | Cita (año)
   },
   convergencia: {
     nombre: 'Convergencia de referentes', fn: convergencia, archivo: 'referentes',
-    ayuda: `color azul · formato doble | simple
+    ayuda: `color azul
 prefijo Referente
 referente Nombre | quién lo organiza
   * factor que el proyecto rescata (asterisco)
@@ -697,14 +779,14 @@ destino Proyecto | bajada | color del punto`,
   },
   etapas: {
     nombre: 'Etapas isométricas', fn: etapas, archivo: 'etapas',
-    ayuda: `color rojo · formato doble | simple
+    ayuda: `color rojo
 prefijo Etapa
 etapa Título | abierta · cerrada | más · menos tiempo
   desc texto junto al asterisco`,
   },
   recorrido: {
     nombre: 'Recorrido con hitos', fn: recorrido, archivo: 'recorrido',
-    ayuda: `color azul · formato doble | simple
+    ayuda: `color azul
 punto Dato | Título            (punto negro)
 punto Dato | Título | abajo    (etiqueta abajo)
 hito Dato | Título | descripción   (asterisco)
@@ -712,7 +794,7 @@ valle                         (sube, baja y vuelve a subir)`,
   },
   venn: {
     nombre: 'Venn de tres ámbitos', fn: venn, archivo: 'venn',
-    ayuda: `color rojo · formato simple | doble
+    ayuda: `color rojo
 estilo original   (mayúsculas grises, como p. 41)
 ambito Nombre      (3 veces: arriba, izquierda, derecha)
 cruce 1 2 | texto  (cruce de dos ámbitos)
@@ -720,14 +802,13 @@ cruce 1 2 3 | texto`,
   },
   cuadrantes: {
     nombre: 'Cuadrantes (FODA)', fn: cuadrantes, archivo: 'cuadrantes',
-    ayuda: `color rosado · formato simple | doble
+    ayuda: `color rosado
 cuadrante Título    (4: arriba izq, arriba der, abajo izq, abajo der)
   - Negrita: texto normal`,
   },
   trayectorias: {
     nombre: 'Trayectorias comparadas', fn: trayectorias, archivo: 'trayectorias',
-    ayuda: `formato doble | simple
-origen Título | color del punto
+    ayuda: `origen Título | color del punto
 arriba Destino | color
   paso Palabra      (zigzag)
 abajo Destino | color
@@ -735,7 +816,7 @@ abajo Destino | color
   },
   barras: {
     nombre: 'Barras proporcionales', fn: barras, archivo: 'barras',
-    ayuda: `color rojo · formato simple | doble
+    ayuda: `color rojo
 prefijo $ · unidad  pts
 barra Etiqueta | valor | * (resaltar) | nota
 total Total | valor (si no, se suma)`,

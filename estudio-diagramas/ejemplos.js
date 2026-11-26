@@ -4,7 +4,6 @@ window.EJEMPLOS = {
 // Cierre del ámbito 3. Fabricación digital (3.1 → 3.4)
 eje: `nombre fabricacion-digital
 color rojo
-formato doble
 
 nodo Primeros medios tecnológicos
   rama Piedra, bronce y hierro | Childe (1936)
@@ -39,7 +38,6 @@ arco abajo 2 5 | Volver a hacer con las propias manos | Martínez Torán (2016)
 // Factores rescatados de los referentes (9.2: Mi Primer Robot, Nube Lab, Ideo Maker)
 convergencia: `nombre referentes
 color azul
-formato doble
 prefijo Referente
 
 referente Mi Primer Robot | Municipalidad de Renca, INNOVA UTEM y La Fábrica de Renca
@@ -63,7 +61,6 @@ destino Sala Maker | Taller de tres sesiones en la sala de clases | verde
 // 7.x Metodología proyectual (pp. 77–79)
 etapas: `nombre etapas-metodologia
 color rojo
-formato doble
 prefijo Etapa
 
 etapa Investigación | abierta | más
@@ -85,7 +82,6 @@ etapa Análisis y proyección | abierta | menos
 // 11.2 Recorrido del taller (pp. 102–103)
 recorrido: `nombre recorrido-taller
 color azul
-formato doble
 
 punto Encuesta | Inicio
 valle
@@ -99,7 +95,6 @@ punto Valoración | Final | abajo
 // 4. Marco teórico: intersección de los tres ámbitos (p. 41)
 venn: `nombre ambitos
 color rojo
-formato simple
 
 ambito Pedagogía
 ambito Territorio
@@ -112,7 +107,6 @@ cruce 2 3 | El acceso de los Fab Labs en Chile.
 // Análisis FODA (p. 127)
 cuadrantes: `nombre foda
 color rosado
-formato simple
 
 cuadrante Fortalezas
   - Bajo costo por estudiante: el taller completo cuesta $200.131 para un curso de 33 estudiantes, unos $6.065 por estudiante.
@@ -132,7 +126,6 @@ cuadrante Amenazas
 
 // 1. Pedagogía: enseñar para aprender o para memorizar (pp. 22–24)
 trayectorias: `nombre ensenar
-formato doble
 
 origen Enseñar | azul
 arriba Aprender | verde
@@ -152,7 +145,6 @@ abajo Memorizar | verde
 // Costos del taller por sesión (p. 126)
 barras: `nombre costos
 color rojo
-formato simple
 prefijo $
 
 barra Sesión 01 | 13.800 | | Proponer

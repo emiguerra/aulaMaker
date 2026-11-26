@@ -6,7 +6,6 @@ window.DIAGRAMAS = [
 { id: 'autores-pedagogia', cap: '1. Pedagogía', pag: '18–19', titulo: 'Hilo de autores de la pedagogía', plantilla: 'eje', prioridad: 'baja', texto:
 `nombre autores-pedagogia
 color azul
-formato doble
 
 nodo Transmisión
   sub Acción de las generaciones adultas sobre las jóvenes
@@ -30,7 +29,6 @@ nodo Reconstruir lo conocido
 { id: 'sistema-escolar', cap: '1. Pedagogía', pag: '20', titulo: 'Sistema escolar chileno', plantilla: 'arbol', prioridad: 'baja', texto:
 `nombre sistema-escolar
 color azul
-formato simple
 
 raiz Sistema escolar chileno | Tres niveles (parvularia, básica y media) y tres tipos de establecimiento, organizados así desde la dictadura (1973–1990). Bellei (2015)
 hijo Público | Administración traspasada del Estado central a las municipalidades. | Sala Maker trabaja aquí
@@ -50,7 +48,6 @@ valor 14 % | 2008
 { id: 'linea-fablabs', cap: '3. Fabricación digital', pag: '38', titulo: 'Origen y expansión de los Fab Labs', plantilla: 'linea', prioridad: 'media', texto:
 `nombre linea-fablabs
 color rojo
-formato doble
 
 hito MIT | Curso "How to Make Almost Anything": más de 500 inscritos en su primera edición | García Sáez (2016)
 hito 2001 | El CBA-MIT impulsa los Fab Labs para democratizar la fabricación digital | Herrera Polo y Juárez (2012)
@@ -97,7 +94,6 @@ brecha
 { id: 'deuda', cap: '4. Marco teórico', pag: '44–45', titulo: 'La deuda educacional en el tiempo', plantilla: 'linea', prioridad: 'media', texto:
 `nombre deuda-educacional
 color rojo
-formato doble
 
 hito 1973–1990 | Municipalización y financiamiento estatal a privados | Bellei (2015)
 hito 2006 | Segmentación social: los quintiles de menor ingreso se desplazan a la educación municipal | Cornejo (2006)
@@ -118,7 +114,6 @@ paso Rediseño | ajustar y volver a intentar
 { id: 'estado-cuestion', cap: '5. Estado de la cuestión', pag: '47–49', titulo: 'Aportes de tres tesis', plantilla: 'convergencia', prioridad: 'alta', revisar: true, texto:
 `nombre estado-cuestion
 color rojo
-formato doble
 prefijo Tesis
 
 referente Stgo. Makerspace | Weinstein (2016), Universidad de Chile
@@ -151,7 +146,6 @@ fila Sala Maker * | si | si | si | si | si
 { id: 'argumento', cap: '7. Diseño metodológico', pag: '55–61', titulo: 'Cadena del argumento', plantilla: 'cadena', prioridad: 'alta', texto:
 `nombre argumento
 color rojo
-formato doble
 
 eslabon Problemática | Los métodos memorísticos no cierran la brecha de resultados entre grupos socioeconómicos: la mantienen.
 eslabon Oportunidad | La cultura DIY permite aprender haciendo sin necesitar un Fab Lab.
@@ -162,7 +156,6 @@ eslabon Pregunta | ¿Puede el diseño de un recurso pedagógico maker integrar m
 { id: 'objetivos', cap: '7. Diseño metodológico', pag: '62', titulo: 'Objetivos y etapas', plantilla: 'arbol', prioridad: 'alta', revisar: true, texto:
 `nombre objetivos
 color rojo
-formato doble
 prefijo Específico
 
 raiz Objetivo general | Implementar un recurso pedagógico maker que proponga metodologías activas de aprendizaje, mediante un taller de tres sesiones en un quinto básico municipal.
@@ -199,7 +192,6 @@ paso Repite
 { id: 'preguntas', cap: '8. Descripción del proyecto', pag: '65–66', titulo: 'Qué, por qué, cómo, para qué, cuándo y dónde', plantilla: 'cuadrantes', prioridad: 'media', texto:
 `nombre preguntas
 color rosado
-formato simple
 columnas 2
 
 bloque ¿Qué?
@@ -226,7 +218,6 @@ anillo Familias | indirecto
 { id: 'entrevistas', cap: '9. Diseño', pag: '69–71', titulo: 'Hallazgos de las entrevistas', plantilla: 'convergencia', prioridad: 'alta', revisar: true, texto:
 `nombre entrevistas
 color azul
-formato doble
 prefijo Entrevista
 
 referente Belén Pedrero | Profesora diferencial, PIE, La Pintana
@@ -260,7 +251,6 @@ par Proyectos distintos por grupo | Todos los grupos sobre un mismo teclado con 
 { id: 'iteraciones', cap: '10. Iteraciones', pag: '94–96', titulo: 'Línea de iteraciones', plantilla: 'linea', prioridad: 'media', revisar: true, texto:
 `nombre iteraciones
 color rojo
-formato doble
 
 hito Antes de S1 | Reunión con Aarón: se revisa el taller y se ajustan las sesiones 1, 2 y 3
 hito Idea | Diseñar una placa que reemplace la protoboard
@@ -281,7 +271,6 @@ par Difícil explicar cómo funcionan las conexiones | Conexión y explicación 
 { id: 'vinculacion', cap: '11. Implementación', pag: '98', titulo: 'Vinculación con el Colegio Maipo', plantilla: 'cadena', prioridad: 'baja', texto:
 `nombre vinculacion
 color azul
-formato simple
 prefijo no
 
 eslabon Directora | Autoriza la implementación de Sala Maker.
@@ -292,7 +281,6 @@ eslabon Carta | La vinculación se formaliza con una carta de respaldo.
 { id: 'recorrido', cap: '11. Implementación', pag: '102–103', titulo: 'Recorrido del taller', plantilla: 'recorrido', prioridad: 'existe', texto: E.recorrido },
 { id: 'ritmo', cap: '11. Implementación', pag: '105–115', titulo: 'Ritmo del taller', plantilla: 'tiempos', prioridad: 'alta', texto:
 `nombre ritmo-taller
-formato doble
 total 90
 
 modalidad Todo el curso | azul
@@ -339,7 +327,6 @@ fila Michi | ? | ? | no
 { id: 'flujo-software', cap: '12. Gestión', pag: '122–123', titulo: 'Del software a la máquina', plantilla: 'flujo', prioridad: 'media', texto:
 `nombre flujo-software
 color rojo
-formato doble
 
 etapas Diseño | Preparación | Máquina | Resultado
 ruta Adobe Illustrator | Falcon Design Space | Cortadora láser | Placas del identificador y perro Colo-Colo en MDF
@@ -352,7 +339,6 @@ ruta Arduino IDE | | Arduino | Código del teclado de la sesión 3
 { id: 'canvas', cap: '12. Gestión', pag: '128', titulo: 'Modelo Canvas', plantilla: 'cuadrantes', prioridad: 'media', texto:
 `nombre canvas
 color rosado
-formato doble
 columnas 5
 
 bloque Socios clave
